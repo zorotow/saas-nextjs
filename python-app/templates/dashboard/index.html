@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+        <h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
+        <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Welcome back</dt>
+                                <dd class="text-lg font-medium text-gray-900">{{ user.name or user.email }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% if team %}
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Team</dt>
+                                <dd class="text-lg font-medium text-gray-900">{{ team.name }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        <a href="{{ url_for('dashboard_team') }}" class="font-medium text-orange-600 hover:text-orange-500">Manage team</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Plan</dt>
+                                <dd class="text-lg font-medium text-gray-900">{{ team.plan_name or 'Free' if team else 'Free' }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        <a href="{{ url_for('pricing') }}" class="font-medium text-orange-600 hover:text-orange-500">View plans</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-8">
+            <h2 class="text-lg font-medium text-gray-900">Quick Actions</h2>
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <a href="{{ url_for('dashboard_general') }}" class="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900">Account Settings</p>
+                        <p class="text-sm text-gray-500">Update your profile and preferences</p>
+                    </div>
+                </a>
+                <a href="{{ url_for('dashboard_security') }}" class="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900">Security</p>
+                        <p class="text-sm text-gray-500">Manage your password and security</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

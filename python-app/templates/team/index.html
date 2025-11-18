@@ -1,0 +1,89 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+        <h1 class="text-2xl font-semibold text-gray-900">Team Settings</h1>
+        <p class="mt-1 text-sm text-gray-600">Manage your team members and invitations.</p>
+        <div class="mt-6">
+            <h2 class="text-lg font-medium text-gray-900">Team Members</h2>
+            <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-md">
+                <ul class="divide-y divide-gray-200">
+                    {% for member in team.members %}
+                    <li>
+                        <div class="px-4 py-4 flex items-center justify-between sm:px-6">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                        <span class="text-sm font-medium text-gray-600">{{ (member.name or member.email)[:2]|upper }}</span>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-900">{{ member.name or member.email }}</p>
+                                    <p class="text-sm text-gray-500">{{ member.email }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full {% if member.role == 'owner' %}bg-orange-100 text-orange-800{% else %}bg-gray-100 text-gray-800{% endif %}">{{ member.role|capitalize }}</span>
+                                {% if member.user_id != user.id %}
+                                <form action="{{ url_for('team_remove_member') }}" method="POST" onsubmit="return confirm('Remove this team member?');">
+                                    <input type="hidden" name="memberId" value="{{ member.id }}">
+                                    <button type="submit" class="text-red-600 hover:text-red-900 text-sm">Remove</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="mt-8">
+            <h2 class="text-lg font-medium text-gray-900">Invite Team Member</h2>
+            <form action="{{ url_for('team_invite') }}" method="POST" class="mt-4">
+                <div class="bg-white shadow sm:rounded-md">
+                    <div class="px-4 py-5 sm:p-6">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div class="sm:col-span-2">
+                                <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
+                                <input type="email" name="email" id="email" class="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="teammate@example.com" required>
+                            </div>
+                            <div>
+                                <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+                                <select name="role" id="role" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm">
+                                    <option value="member">Member</option>
+                                    <option value="owner">Owner</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">Send Invitation</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% if invitations %}
+        <div class="mt-8">
+            <h2 class="text-lg font-medium text-gray-900">Pending Invitations</h2>
+            <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-md">
+                <ul class="divide-y divide-gray-200">
+                    {% for invitation in invitations %}
+                    {% if invitation.status == 'pending' %}
+                    <li>
+                        <div class="px-4 py-4 flex items-center justify-between sm:px-6">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ invitation.email }}</p>
+                                <p class="text-sm text-gray-500">Invited as {{ invitation.role }}</p>
+                            </div>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">Pending</span>
+                        </div>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

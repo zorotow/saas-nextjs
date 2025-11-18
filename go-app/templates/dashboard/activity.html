@@ -1,0 +1,49 @@
+{{define "activity.html"}}
+{{template "layout" .}}
+{{end}}
+
+{{define "content"}}
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="md:grid md:grid-cols-3 md:gap-6">
+        <div class="md:col-span-1">
+            <h3 class="text-lg font-medium leading-6 text-gray-900">Activity Log</h3>
+            <p class="mt-1 text-sm text-gray-600">View your recent account activity.</p>
+            <nav class="mt-5 space-y-1">
+                <a href="/dashboard/general" class="border-transparent text-gray-600 hover:bg-gray-50 block pl-3 pr-4 py-2 border-l-4 text-sm font-medium">General</a>
+                <a href="/dashboard/security" class="border-transparent text-gray-600 hover:bg-gray-50 block pl-3 pr-4 py-2 border-l-4 text-sm font-medium">Security</a>
+                <a href="/dashboard/activity" class="bg-orange-50 border-orange-500 text-orange-700 block pl-3 pr-4 py-2 border-l-4 text-sm font-medium">Activity</a>
+            </nav>
+        </div>
+        <div class="mt-5 md:mt-0 md:col-span-2">
+            <div class="bg-white shadow overflow-hidden sm:rounded-md">
+                {{if not .Logs}}
+                <div class="px-4 py-5 sm:p-6 text-center text-gray-500">No activity recorded yet.</div>
+                {{else}}
+                <ul class="divide-y divide-gray-200">
+                    {{range .Logs}}
+                    <li>
+                        <div class="px-4 py-4 sm:px-6">
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{activityLabel .Action}}</p>
+                                <div class="ml-2 flex-shrink-0 flex">
+                                    <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">{{.Action}}</p>
+                                </div>
+                            </div>
+                            <div class="mt-2 sm:flex sm:justify-between">
+                                <div class="sm:flex">
+                                    {{if .IPAddress.Valid}}<p class="flex items-center text-sm text-gray-500">{{.IPAddress.String}}</p>{{end}}
+                                </div>
+                                <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                                    <p>{{.Timestamp.Format "Jan 2, 2006 3:04 PM"}}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    {{end}}
+                </ul>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

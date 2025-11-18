@@ -136,6 +136,9 @@ func main() {
 	http.HandleFunc("/pricing", pricingHandler)
 	http.HandleFunc("/api/user", apiUserHandler)
 	http.HandleFunc("/api/team", apiTeamHandler)
+	http.HandleFunc("/api/stripe/checkout", stripeCheckoutHandler)
+	http.HandleFunc("/api/stripe/portal", stripePortalHandler)
+	http.HandleFunc("/api/stripe/webhook", stripeWebhookHandler)
 
 	port := getEnv("PORT", "8080")
 	log.Printf("Server starting on :%s", port)

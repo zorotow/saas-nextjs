@@ -15,6 +15,8 @@ import secrets
 import mysql.connector
 from mysql.connector import pooling
 from datetime import datetime, timedelta
+from products import PRICING_PLANS, get_plan_by_price_id, get_plan
+from stripe_helper import StripeHelper
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('AUTH_SECRET', 'change-this-secret-key-in-production')
@@ -636,7 +638,141 @@ def team_remove_member():
 
 @app.route('/pricing')
 def pricing():
-    return render_template('dashboard/pricing.html')
+    from products import get_all_plans
+    plans = get_all_plans()
+    return render_template('dashboard/pricing.html', plans=plans)
+
+# Stripe Routes
+@app.route('/api/stripe/checkout', methods=['POST'])
+@login_required
+def stripe_checkout():
+    user = get_current_user()
+    user_with_team = get_user_with_team(user['id'])
+
+    if not user_with_team or not user_with_team.get('team_id'):
+        return jsonify({'error': 'User is not part of a team'}), 400
+
+    price_id = request.json.get('priceId')
+    if not price_id:
+        return jsonify({'error': 'Price ID is required'}), 400
+
+    stripe = StripeHelper()
+    result = stripe.create_checkout_session(
+        team_id=user_with_team['team_id'],
+        price_id=price_id,
+        success_url=f"{config['APP_URL']}/dashboard?success=subscribed",
+        cancel_url=f"{config['APP_URL']}/pricing"
+    )
+
+    if 'error' in result:
+        return jsonify(result), 400
+
+    return jsonify(result)
+
+@app.route('/api/stripe/portal', methods=['POST'])
+@login_required
+def stripe_portal():
+    user = get_current_user()
+    user_with_team = get_user_with_team(user['id'])
+
+    if not user_with_team or not user_with_team.get('team_id'):
+        return jsonify({'error': 'User is not part of a team'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT stripe_customer_id FROM teams WHERE id = %s", (user_with_team['team_id'],))
+    team = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not team or not team.get('stripe_customer_id'):
+        return jsonify({'error': 'No billing account found'}), 400
+
+    stripe = StripeHelper()
+    result = stripe.create_portal_session(
+        customer_id=team['stripe_customer_id'],
+        return_url=f"{config['APP_URL']}/dashboard"
+    )
+
+    if 'error' in result:
+        return jsonify(result), 400
+
+    return jsonify(result)
+
+@app.route('/api/stripe/webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get('Stripe-Signature')
+
+    stripe = StripeHelper()
+    event = stripe.verify_webhook(payload, sig_header)
+
+    if not event:
+        return jsonify({'error': 'Invalid signature'}), 400
+
+    event_type = event.get('type')
+    data = event.get('data', {}).get('object', {})
+
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        if event_type == 'checkout.session.completed':
+            team_id = data.get('client_reference_id')
+            customer_id = data.get('customer')
+            subscription_id = data.get('subscription')
+
+            if team_id and customer_id:
+                cursor.execute("""
+                    UPDATE teams SET
+                        stripe_customer_id = %s,
+                        stripe_subscription_id = %s,
+                        subscription_status = 'active'
+                    WHERE id = %s
+                """, (customer_id, subscription_id, team_id))
+                conn.commit()
+
+        elif event_type == 'customer.subscription.updated':
+            subscription_id = data.get('id')
+            status = data.get('status')
+            price_id = data.get('items', {}).get('data', [{}])[0].get('price', {}).get('id')
+
+            plan = get_plan_by_price_id(price_id)
+            plan_name = plan['name'] if plan else None
+
+            cursor.execute("""
+                UPDATE teams SET
+                    subscription_status = %s,
+                    plan_name = %s
+                WHERE stripe_subscription_id = %s
+            """, (status, plan_name, subscription_id))
+            conn.commit()
+
+        elif event_type == 'customer.subscription.deleted':
+            subscription_id = data.get('id')
+
+            cursor.execute("""
+                UPDATE teams SET
+                    subscription_status = 'canceled',
+                    plan_name = 'free'
+                WHERE stripe_subscription_id = %s
+            """, (subscription_id,))
+            conn.commit()
+
+        elif event_type == 'invoice.payment_failed':
+            subscription_id = data.get('subscription')
+
+            cursor.execute("""
+                UPDATE teams SET subscription_status = 'past_due'
+                WHERE stripe_subscription_id = %s
+            """, (subscription_id,))
+            conn.commit()
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    return jsonify({'received': True})
 
 # API Routes
 @app.route('/api/user')

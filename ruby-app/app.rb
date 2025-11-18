@@ -6,6 +6,8 @@ require 'securerandom'
 require 'openssl'
 require 'base64'
 require 'erb'
+require_relative 'products'
+require_relative 'stripe_helper'
 
 # Configuration
 configure do
@@ -501,7 +503,127 @@ post '/dashboard/team/remove-member' do
 end
 
 get '/pricing' do
-  erb :'dashboard/pricing', layout: :layout
+  plans = get_all_plans
+  erb :'dashboard/pricing', layout: :layout, locals: { plans: plans }
+end
+
+# Stripe routes
+post '/api/stripe/checkout' do
+  content_type :json
+  return { error: 'Unauthorized' }.to_json unless current_user
+
+  user_with_team = get_user_with_team(current_user['id'])
+  unless user_with_team&.dig('team_id')
+    return { error: 'User is not part of a team' }.to_json
+  end
+
+  data = JSON.parse(request.body.read) rescue {}
+  price_id = data['priceId']
+
+  unless price_id
+    return { error: 'Price ID is required' }.to_json
+  end
+
+  stripe = StripeHelper.new
+  result = stripe.create_checkout_session(
+    team_id: user_with_team['team_id'],
+    price_id: price_id,
+    success_url: "#{settings.app_url}/dashboard?success=subscribed",
+    cancel_url: "#{settings.app_url}/pricing"
+  )
+
+  result.to_json
+end
+
+post '/api/stripe/portal' do
+  content_type :json
+  return { error: 'Unauthorized' }.to_json unless current_user
+
+  user_with_team = get_user_with_team(current_user['id'])
+  unless user_with_team&.dig('team_id')
+    return { error: 'User is not part of a team' }.to_json
+  end
+
+  team = db.query("SELECT stripe_customer_id FROM teams WHERE id = #{user_with_team['team_id']}").first
+  unless team&.dig('stripe_customer_id')
+    return { error: 'No billing account found' }.to_json
+  end
+
+  stripe = StripeHelper.new
+  result = stripe.create_portal_session(
+    customer_id: team['stripe_customer_id'],
+    return_url: "#{settings.app_url}/dashboard"
+  )
+
+  result.to_json
+end
+
+post '/api/stripe/webhook' do
+  content_type :json
+  payload = request.body.read
+  sig_header = request.env['HTTP_STRIPE_SIGNATURE']
+
+  stripe = StripeHelper.new
+  event = stripe.verify_webhook(payload, sig_header)
+
+  unless event
+    halt 400, { error: 'Invalid signature' }.to_json
+  end
+
+  event_type = event['type']
+  data = event.dig('data', 'object') || {}
+
+  case event_type
+  when 'checkout.session.completed'
+    team_id = data['client_reference_id']
+    customer_id = data['customer']
+    subscription_id = data['subscription']
+
+    if team_id && customer_id
+      db.query(<<-SQL)
+        UPDATE teams SET
+          stripe_customer_id = '#{db.escape(customer_id)}',
+          stripe_subscription_id = '#{db.escape(subscription_id.to_s)}',
+          subscription_status = 'active'
+        WHERE id = #{team_id.to_i}
+      SQL
+    end
+
+  when 'customer.subscription.updated'
+    subscription_id = data['id']
+    status = data['status']
+    price_id = data.dig('items', 'data', 0, 'price', 'id')
+
+    plan = get_plan_by_price_id(price_id)
+    plan_name = plan ? plan['name'] : nil
+
+    db.query(<<-SQL)
+      UPDATE teams SET
+        subscription_status = '#{db.escape(status)}',
+        plan_name = #{plan_name ? "'#{db.escape(plan_name)}'" : 'NULL'}
+      WHERE stripe_subscription_id = '#{db.escape(subscription_id)}'
+    SQL
+
+  when 'customer.subscription.deleted'
+    subscription_id = data['id']
+
+    db.query(<<-SQL)
+      UPDATE teams SET
+        subscription_status = 'canceled',
+        plan_name = 'free'
+      WHERE stripe_subscription_id = '#{db.escape(subscription_id)}'
+    SQL
+
+  when 'invoice.payment_failed'
+    subscription_id = data['subscription']
+
+    db.query(<<-SQL)
+      UPDATE teams SET subscription_status = 'past_due'
+      WHERE stripe_subscription_id = '#{db.escape(subscription_id)}'
+    SQL
+  end
+
+  { received: true }.to_json
 end
 
 # API routes

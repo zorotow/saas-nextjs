@@ -1,0 +1,122 @@
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="md:grid md:grid-cols-3 md:gap-6">
+        <div class="md:col-span-1">
+            <div class="px-4 sm:px-0">
+                <h3 class="text-lg font-medium leading-6 text-gray-900">Security Settings</h3>
+                <p class="mt-1 text-sm text-gray-600">
+                    Manage your password and account security.
+                </p>
+            </div>
+
+            <!-- Sidebar Navigation -->
+            <nav class="mt-5 space-y-1">
+                <a href="/dashboard/general" class="border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 block pl-3 pr-4 py-2 border-l-4 text-sm font-medium">
+                    General
+                </a>
+                <a href="/dashboard/security" class="bg-orange-50 border-orange-500 text-orange-700 block pl-3 pr-4 py-2 border-l-4 text-sm font-medium">
+                    Security
+                </a>
+                <a href="/dashboard/activity" class="border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 block pl-3 pr-4 py-2 border-l-4 text-sm font-medium">
+                    Activity
+                </a>
+            </nav>
+        </div>
+
+        <div class="mt-5 md:mt-0 md:col-span-2 space-y-6">
+            <!-- Change Password Form -->
+            <form action="/dashboard/security" method="POST">
+                <?= View::csrf() ?>
+                <div class="shadow sm:rounded-md sm:overflow-hidden">
+                    <div class="px-4 py-5 bg-white space-y-6 sm:p-6">
+                        <h4 class="text-md font-medium text-gray-900">Change Password</h4>
+
+                        <div>
+                            <label for="currentPassword" class="block text-sm font-medium text-gray-700">
+                                Current Password
+                            </label>
+                            <input
+                                type="password"
+                                name="currentPassword"
+                                id="currentPassword"
+                                class="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                required
+                                minlength="8"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="newPassword" class="block text-sm font-medium text-gray-700">
+                                New Password
+                            </label>
+                            <input
+                                type="password"
+                                name="newPassword"
+                                id="newPassword"
+                                class="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                required
+                                minlength="8"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="confirmPassword" class="block text-sm font-medium text-gray-700">
+                                Confirm New Password
+                            </label>
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                id="confirmPassword"
+                                class="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                required
+                                minlength="8"
+                            >
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                        <button
+                            type="submit"
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                        >
+                            Update Password
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Delete Account -->
+            <form action="/dashboard/delete-account" method="POST" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
+                <?= View::csrf() ?>
+                <div class="shadow sm:rounded-md sm:overflow-hidden border border-red-200">
+                    <div class="px-4 py-5 bg-white space-y-6 sm:p-6">
+                        <h4 class="text-md font-medium text-red-600">Delete Account</h4>
+                        <p class="text-sm text-gray-500">
+                            Once you delete your account, there is no going back. Please be certain.
+                        </p>
+
+                        <div>
+                            <label for="deletePassword" class="block text-sm font-medium text-gray-700">
+                                Enter your password to confirm
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                id="deletePassword"
+                                class="mt-1 focus:ring-red-500 focus:border-red-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                required
+                                minlength="8"
+                            >
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-red-50 text-right sm:px-6">
+                        <button
+                            type="submit"
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                            Delete Account
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
